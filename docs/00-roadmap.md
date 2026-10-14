@@ -25,7 +25,7 @@ Every step below follows the same loop (this is also how you earn the GitHub bad
 
 ## Decisions already made (change them if you disagree)
 
-- **IaC tool: AWS CDK in C#.** Same language as the app, so you learn one syntax.
+- **IaC tool: AWS CDK in C# (confirmed).** Same language as the app, so you learn one syntax. Terraform was considered and rejected to avoid managing state files.
 - **Embeddings:** Amazon Titan Text Embeddings V2 (1024 dimensions).
 - **Generation:** Amazon Nova 2 Lite via Bedrock (exact model ID is verified in step 08, since IDs and regional availability change).
 - **Local dev:** Aspire runs Postgres in Docker so you never need AWS to learn steps 01-09.

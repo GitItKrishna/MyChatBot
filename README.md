@@ -1,4 +1,4 @@
-# RAG Chatbot on AWS (.NET, Blazor, Aspire, FastEndpoints)
+# MyChatBot: RAG Chatbot on AWS (.NET, Blazor, Aspire, FastEndpoints)
 
 Drop PDFs into S3, ingest them, and ask questions about your own documents. Answers are grounded in your documents and cite sources with page numbers.
 
