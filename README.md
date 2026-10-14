@@ -35,8 +35,15 @@ Start with [docs/01-how-rag-works.md](docs/01-how-rag-works.md), then follow [do
 | Step | Status |
 |------|--------|
 | 00 Project docs and roadmap | Done |
-| 01 Solution + Aspire + FastEndpoints skeleton | Next |
-| 02-13 | See roadmap |
+| 01 Solution + Aspire + FastEndpoints skeleton | Done ([lesson](docs/02-step-01-skeleton.md)) |
+| 02 Blazor chat UI shell | Next |
+| 03-13 | See roadmap |
+
+## Run it
+
+```bash
+dotnet run --project src/MyChatBot.AppHost
+```
 
 ## Prerequisites
 
