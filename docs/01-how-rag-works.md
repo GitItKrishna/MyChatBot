@@ -1,62 +1,47 @@
-# How RAG works, explained for a complete beginner
+# RAG pipeline overview
 
-## The problem
+An LLM only knows its training data, so it cannot answer from private documents and may fabricate an answer. Retrieval-Augmented Generation retrieves the relevant passages from the documents and instructs the model to answer only from them. Pasting entire documents into every prompt is too long, slow and costly.
 
-An LLM (like Nova or Claude) only knows what it saw in training. It has never read **your** PDFs. If you ask "What is our refund policy?", it will either say it doesn't know or, worse, **make something up**.
-
-You cannot paste 500 pages into every question (too long, too slow, too expensive). So we do this instead:
-
-> **RAG = Retrieval-Augmented Generation.** First *retrieve* the few relevant passages from your documents, then ask the LLM to *generate* an answer using only those passages.
-
-Think of an open-book exam. The LLM is the student, your PDFs are the textbook, and retrieval is the index at the back of the book that finds the right pages.
-
-## The two halves
-
-### Half 1: Ingestion (done once per document, "offline")
+## Ingestion (once per document)
 
 ```
-PDF in S3 -> extract text per page -> split into chunks -> embed each chunk -> store in PostgreSQL
+PDF in S3 -> extract text per page -> chunk -> embed each chunk -> store in PostgreSQL
 ```
 
-1. **Extract text.** Read the PDF and keep track of which page each piece of text came from (that is how we show page numbers later).
-2. **Chunk.** Split the text into pieces of roughly 500-1000 characters. Why? A whole PDF is too big to match precisely, and a single sentence loses context. Chunks are the sweet spot. Neighboring chunks **overlap** a little so an idea cut at the boundary is not lost.
-3. **Embed.** Send each chunk to Amazon Titan. It returns a list of ~1024 numbers (a **vector**). Texts with similar *meaning* get vectors that point in similar directions, even if they share no words. "car" and "automobile" end up close together.
-4. **Store.** Save chunk text, page number, source file and vector in PostgreSQL. The **pgvector** extension adds a `vector` column type and fast "find nearest vectors" search.
+1. **Extract.** Read the PDF page by page, keeping the page number with each text span (required for citations).
+2. **Chunk.** Split text into roughly 500-1000 character pieces with a small overlap between neighbors, so content cut at a boundary remains retrievable. Whole documents match too coarsely; single sentences lose context.
+3. **Embed.** Send each chunk to Amazon Titan, which returns a 1024-dimension vector. Semantically similar texts produce nearby vectors even without shared words.
+4. **Store.** Persist chunk text, page number, source document and vector in PostgreSQL. pgvector provides the `vector` type and nearest-neighbor search.
 
-### Half 2: Query (every time someone asks a question, "online")
+## Query (every question)
 
 ```
-Question -> embed it -> find nearest chunks -> build prompt -> LLM answers -> return answer + sources
+Question -> embed -> nearest chunks -> build prompt -> LLM -> answer + sources
 ```
 
-1. **Embed the question** with the same Titan model, producing a vector.
-2. **Similarity search.** Ask Postgres for the top-k (e.g. 5) chunks whose vectors are closest to the question vector (cosine distance).
-3. **Build a prompt:** "Answer using ONLY the context below. If the answer isn't there, say you don't know. Context: [chunk 1] [chunk 2] ... Question: ..."
-4. **Generate.** Nova 2 Lite reads that prompt and writes the answer.
-5. **Return** the answer plus the sources (file name, page number) of the chunks used. That is the "grounded" part: you can check every claim.
+1. Embed the question with the same model used at ingestion.
+2. Retrieve the top-k chunks by cosine distance.
+3. Build a prompt instructing the model to answer only from the supplied context and to say so when the answer is absent.
+4. Generate the answer with Nova 2 Lite.
+5. Return the answer with the file name and page number of each chunk used.
 
-## A tiny worked example
+## Example
 
-Your PDF says (page 7): *"Customers may return items within 30 days for a full refund."*
+Page 7 of `policy.pdf` states: "Customers may return items within 30 days for a full refund." Ingestion stores that chunk with page 7 and its vector. The question "Can I get my money back after three weeks?" shares no keywords with it, but the vectors are close, so the chunk is retrieved and the answer cites `policy.pdf`, page 7.
 
-- Ingestion stores that chunk with page = 7 and its vector.
-- You ask: *"Can I get my money back after three weeks?"*
-- No word matches ("money back" vs "refund"), but the vectors are close, so the chunk is retrieved.
-- The LLM answers: "Yes, returns within 30 days get a full refund. (policy.pdf, page 7)".
+## Retrieval quality
 
-## Why retrieval matters as much as the LLM
+The model can only use what retrieval returns. Most quality problems come from retrieval: chunk size, overlap, top-k, and the absence of a similarity threshold. Step 09 covers tuning and evaluation.
 
-The LLM can only answer from what retrieval hands it. If the right chunk is not in the top-k, even the best model fails or guesses. Most RAG quality problems are retrieval problems: bad chunk size, no overlap, wrong top-k, no score threshold. Step 09 is devoted to this.
+## Glossary
 
-## Vocabulary cheat sheet
-
-| Term | Plain meaning |
-|------|---------------|
-| Embedding / vector | A list of numbers that captures the meaning of text |
-| Chunk | A small piece of a document |
-| Cosine similarity | How close two vectors point (1 = same direction) |
-| top-k | How many chunks to retrieve |
-| Grounding | Forcing the answer to come from the provided text |
-| Hallucination | The model confidently inventing facts |
-| pgvector | PostgreSQL extension for storing and searching vectors |
-| Bedrock | AWS service that hosts models like Titan and Nova behind one API |
+| Term | Definition |
+|------|------------|
+| Embedding | Fixed-length numeric vector representing the meaning of a text |
+| Chunk | A bounded piece of a document |
+| Cosine similarity | Similarity of two vectors by angle; 1 means same direction |
+| top-k | Number of chunks retrieved per query |
+| Grounding | Constraining the answer to the supplied context |
+| Hallucination | Model output not supported by the context |
+| pgvector | PostgreSQL extension for vector storage and search |
+| Bedrock | AWS service exposing foundation models such as Titan and Nova |

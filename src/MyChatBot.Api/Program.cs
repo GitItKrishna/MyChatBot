@@ -1,6 +1,8 @@
 using FastEndpoints;
 using Microsoft.EntityFrameworkCore;
+using MyChatBot.Api.Chunking;
 using MyChatBot.Api.Data;
+using MyChatBot.Api.Pdf;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,13 @@ builder.EnrichNpgsqlDbContext<AppDbContext>();
 
 // Creates/updates the tables each time the API starts.
 builder.Services.AddHostedService<DatabaseInitializer>();
+
+// PDF reading and chunking. Singletons: they hold no per-request state.
+builder.Services.Configure<ChunkingOptions>(builder.Configuration.GetSection(ChunkingOptions.SectionName));
+builder.Services.Configure<PdfLimitsOptions>(builder.Configuration.GetSection(PdfLimitsOptions.SectionName));
+builder.Services.AddSingleton<IPdfTextExtractor, PdfPigTextExtractor>();
+builder.Services.AddSingleton<PdfUploadValidator>();
+builder.Services.AddSingleton<ITextChunker, TextChunker>();
 
 // FastEndpoints scans this assembly for classes that inherit Endpoint<,>.
 builder.Services.AddFastEndpoints();

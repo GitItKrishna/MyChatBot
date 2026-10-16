@@ -1,51 +1,43 @@
 # Step 02: Blazor chat UI
 
-**Goal:** a chat page in the browser that sends a question to our API and shows the answer with its sources.
+**Goal:** a chat page that sends a question to the API and displays the answer with sources.
 **Issue:** #4 | **Branch:** `feature/02-blazor-ui`
 
-## Concepts in plain English
+## Concepts
 
-### What is Blazor?
-Normally web pages are built with JavaScript. **Blazor** lets you build them with C# instead. A page is a `.razor` file: HTML with C# mixed in.
+- **Blazor Server.** Components render on the server; UI events and DOM updates travel over a SignalR connection. Every UI event is a server round trip.
+- **Service discovery.** The UI registers its `HttpClient` with `https+http://api`. Aspire resolves `api` to the API's actual address, provided `AppHost.cs` calls `.WithReference(api)`. No ports are hard-coded.
+- **Contract first.** `POST /query` is a placeholder returning a canned answer. The request/response shapes are final, so steps 07-08 replace only the implementation:
+  - Request: `{ "question": string }`
+  - Response: `{ "answer": string, "sources": [{ "fileName": string, "page": int, "snippet": string }] }`
 
-We use **Blazor Server** mode. The page runs on the server, and a live connection (SignalR/WebSocket) sends clicks and keystrokes to the server and sends back only the changes to the screen. Simple to build, but every keystroke is a round trip to the server, which matters for the bug we hit below.
-
-### How does the UI find the API? (service discovery)
-The API's port is chosen by Aspire and changes each run, so we never hard-code it. In `Program.cs` the UI uses the address `https+http://api`. That is not a real address. Aspire sees the name `api` and swaps in the real one. This works because in `AppHost.cs` we wrote `.WithReference(api)`.
-
-### Why is there a placeholder `/query` endpoint?
-We decide the **contract** now: the UI sends `{ question }`, the API replies `{ answer, sources: [{fileName, page, snippet}] }`. Steps 07 and 08 fill in the real logic behind the same shapes, so the UI never needs to change. Building UI first against a fake backend is a common, useful trick.
-
-## What each new file does
+## Files
 
 | File | Role |
 |------|------|
-| `MyChatBot.Api/Endpoints/QueryEndpoint.cs` | Placeholder `POST /query` returning a canned answer and one fake source |
-| `MyChatBot.Web/ChatApiClient.cs` | The UI's only code that talks HTTP to the API |
-| `MyChatBot.Web/Components/Pages/Chat.razor` | The chat page: message list, input box, Send button |
-| `MyChatBot.Web/Components/Pages/Chat.razor.css` | Styles for just this page (blue user bubbles, grey bot bubbles) |
-| `MyChatBot.Web/Program.cs` | Adds Aspire defaults and registers the API client |
-| `MyChatBot.AppHost/AppHost.cs` | Adds the `web` project, gives it the `api` reference, starts it after the API is healthy |
+| `Api/Endpoints/QueryEndpoint.cs` | Placeholder `POST /query` |
+| `Web/ChatApiClient.cs` | Typed HTTP client for the API |
+| `Web/Components/Pages/Chat.razor` (+ `.cs`, `.css`) | Chat page: markup, code-behind, scoped styles |
+| `Web/Program.cs` | Aspire defaults, `ChatApiClient` registration |
+| `AppHost/AppHost.cs` | Adds `web` with `WithReference(api)` and `WaitFor(api)` |
 
-## How the Chat page works
-1. You type; `@bind` copies the text into `_question`.
-2. Pressing Enter or clicking Send runs `SendAsync()`.
-3. It adds your message to `_messages`, calls `Api.AskAsync()`, then adds the bot's reply.
-4. Blazor redraws the list. `_isThinking` shows "Thinking..." and disables the input meanwhile.
-5. If the API is down, we catch the error and show a friendly message instead of crashing.
+## Chat page flow
+1. `@bind` with `oninput` keeps `_question` current.
+2. Enter or Send calls `SendAsync()`, which ignores empty input.
+3. It appends the user message, calls `ChatApiClient.AskAsync()`, then appends the reply.
+4. `_isThinking` shows a pending indicator and disables the form while waiting.
+5. `HttpRequestException` is caught and shown as an error message.
 
-## Bug we hit (worth remembering)
-The Send button was disabled while the text box was empty. Pressing Enter right after typing did nothing, because in Blazor Server the "box now has text" news takes a trip to the server and back, and the button was still disabled when Enter landed. **Fix:** only disable the button while waiting for an answer; `SendAsync` already ignores empty questions. Lesson: do not lean on UI state that updates through a server round trip for input validation; validate in code.
+## Defect found and fixed
+The Send button was disabled while the input was empty. In Blazor Server, the "input has text" state reaches the client only after a server round trip, so a fast Enter press landed on a still-disabled button and was dropped. Fix: disable the button only while a request is in flight; `SendAsync` already guards against empty input. Validate in code rather than relying on UI state updated through a round trip.
 
-## How to run it
+## Run
+
 ```bash
 dotnet run --project src/MyChatBot.AppHost
 ```
-Open the dashboard URL printed in the terminal, find the `web` row, click its link, and ask a question.
+Open the `web` endpoint from the dashboard.
 
-## What we verified
-- `dotnet build`: succeeds.
-- Through Aspire, the page loads, a question goes UI -> API -> back, the placeholder answer and source show, and Enter works.
-
-## Next
-Step 03: PostgreSQL with pgvector in Docker through Aspire, and a schema created on startup.
+## Verification
+- `dotnet build` succeeds.
+- Through Aspire: a question flows UI -> API -> UI; the placeholder answer and source render; Enter submits.
