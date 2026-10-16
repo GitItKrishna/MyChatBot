@@ -5,4 +5,7 @@
     <Project Path="src/MyChatBot.ServiceDefaults/MyChatBot.ServiceDefaults.csproj" />
     <Project Path="src/MyChatBot.Web/MyChatBot.Web.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MyChatBot.Api.Tests/MyChatBot.Api.Tests.csproj" />
+  </Folder>
 </Solution>
