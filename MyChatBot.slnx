@@ -3,5 +3,6 @@
     <Project Path="src/MyChatBot.Api/MyChatBot.Api.csproj" />
     <Project Path="src/MyChatBot.AppHost/MyChatBot.AppHost.csproj" />
     <Project Path="src/MyChatBot.ServiceDefaults/MyChatBot.ServiceDefaults.csproj" />
+    <Project Path="src/MyChatBot.Web/MyChatBot.Web.csproj" />
   </Folder>
 </Solution>

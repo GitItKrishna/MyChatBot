@@ -36,8 +36,9 @@ Start with [docs/01-how-rag-works.md](docs/01-how-rag-works.md), then follow [do
 |------|--------|
 | 00 Project docs and roadmap | Done |
 | 01 Solution + Aspire + FastEndpoints skeleton | Done ([lesson](docs/02-step-01-skeleton.md)) |
-| 02 Blazor chat UI shell | Next |
-| 03-13 | See roadmap |
+| 02 Blazor chat UI shell | Done ([lesson](docs/03-step-02-blazor-ui.md)) |
+| 03 PostgreSQL + pgvector locally | Next |
+| 04-13 | See roadmap |
 
 ## Run it
 

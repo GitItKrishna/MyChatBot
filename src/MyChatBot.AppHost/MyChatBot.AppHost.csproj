@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MyChatBot.Api\MyChatBot.Api.csproj" />
+    <ProjectReference Include="..\MyChatBot.Web\MyChatBot.Web.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

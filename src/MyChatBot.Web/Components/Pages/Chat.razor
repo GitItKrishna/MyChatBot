@@ -1,0 +1,72 @@
+@page "/"
+@inject ChatApiClient Api
+
+<PageTitle>MyChatBot</PageTitle>
+
+<h1>Ask your documents</h1>
+
+<div class="messages">
+    @if (_messages.Count == 0)
+    {
+        <p class="hint">Type a question below. (Right now answers are placeholders; real ones arrive in step 08.)</p>
+    }
+
+    @foreach (var message in _messages)
+    {
+        <div class="message @(message.FromUser ? "user" : "bot")">
+            <div class="text">@message.Text</div>
+
+            @if (message.Sources is { Count: > 0 })
+            {
+                <ul class="sources">
+                    @foreach (var source in message.Sources)
+                    {
+                        <li><strong>@source.FileName</strong>, page @source.Page: <em>@source.Snippet</em></li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    @if (_isThinking)
+    {
+        <div class="message bot"><div class="text">Thinking...</div></div>
+    }
+</div>
+
+<EditForm Model="this" OnSubmit="SendAsync" class="composer">
+    <input @bind="_question" @bind:event="oninput" placeholder="Ask a question..." disabled="@_isThinking" />
+    <button type="submit" disabled="@_isThinking">Send</button>
+</EditForm>
+
+@code {
+    private readonly List<ChatMessage> _messages = [];
+    private string _question = "";
+    private bool _isThinking;
+
+    private async Task SendAsync()
+    {
+        var question = _question.Trim();
+        if (question.Length == 0 || _isThinking) return;
+
+        _messages.Add(new ChatMessage(question, FromUser: true));
+        _question = "";
+        _isThinking = true;
+
+        try
+        {
+            var result = await Api.AskAsync(question);
+            _messages.Add(new ChatMessage(result.Answer, FromUser: false, result.Sources));
+        }
+        catch (HttpRequestException)
+        {
+            _messages.Add(new ChatMessage("Sorry, I couldn't reach the API. Is it running?", FromUser: false));
+        }
+        finally
+        {
+            _isThinking = false;
+        }
+    }
+
+    private record ChatMessage(string Text, bool FromUser, List<SourceReference>? Sources = null);
+}
