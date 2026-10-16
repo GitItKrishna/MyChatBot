@@ -37,8 +37,9 @@ Start with [docs/01-how-rag-works.md](docs/01-how-rag-works.md), then follow [do
 | 00 Project docs and roadmap | Done |
 | 01 Solution + Aspire + FastEndpoints skeleton | Done ([lesson](docs/02-step-01-skeleton.md)) |
 | 02 Blazor chat UI shell | Done ([lesson](docs/03-step-02-blazor-ui.md)) |
-| 03 PostgreSQL + pgvector locally | Next |
-| 04-13 | See roadmap |
+| 03 PostgreSQL + pgvector locally | Done, not yet merged ([lesson](docs/04-step-03-postgres-pgvector.md)) |
+| 04 PDF extraction + chunking | Next |
+| 05-13 | See roadmap |
 
 ## Run it
 
@@ -48,4 +49,4 @@ dotnet run --project src/MyChatBot.AppHost
 
 ## Prerequisites
 
-.NET 10 SDK, Docker, AWS CLI (configured with a profile that has Bedrock access), `gh` CLI.
+.NET 10 SDK, Docker (must be running: Aspire starts Postgres in a container), AWS CLI (configured with a profile that has Bedrock access), `gh` CLI.
