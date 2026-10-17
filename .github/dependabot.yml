@@ -1,0 +1,23 @@
+# Dependabot opens pull requests when dependencies have updates or security fixes.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per family instead of one per package.
+      aspire:
+        patterns: ["Aspire.*"]
+      efcore:
+        patterns: ["Microsoft.EntityFrameworkCore*", "Npgsql*", "Pgvector*"]
+      aws-sdk:
+        patterns: ["AWSSDK.*"]
+      test-tools:
+        patterns: ["xunit*", "Microsoft.NET.Test.Sdk", "coverlet*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
