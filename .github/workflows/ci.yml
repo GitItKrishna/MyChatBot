@@ -1,0 +1,85 @@
+name: CI
+
+# Runs on every push to any branch, and on pull requests into main.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+# Least privilege: this workflow only needs to read the repository.
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the older run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-test:
+    name: Build, test and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # coverlet.collector (already referenced by the test project) records which lines ran.
+      - name: Test with coverage
+        run: >
+          dotnet test --configuration Release --no-build
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage
+          --logger "trx;LogFileName=test-results.trx"
+
+      # Turns the raw coverage files into a readable summary shown on the run page.
+      - name: Coverage summary
+        if: always()
+        run: |
+          dotnet tool install --tool-path ./tools dotnet-reportgenerator-globaltool
+          ./tools/reportgenerator \
+            -reports:"coverage/**/coverage.cobertura.xml" \
+            -targetdir:coverage-report \
+            -reporttypes:"MarkdownSummaryGithub;Html" \
+            -assemblyfilters:"+MyChatBot.Api" \
+            -classfilters:"-MyChatBot.Api.Data.Migrations.*;-Program"
+          cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-and-tests
+          path: |
+            coverage-report
+            coverage/**/test-results.trx
+          if-no-files-found: warn
+
+  dependency-audit:
+    name: Vulnerable NuGet packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Fails on High/Critical advisories; lower severities are reported as warnings.
+      - name: Check packages for known vulnerabilities
+        run: bash .github/scripts/check-vulnerable-packages.sh

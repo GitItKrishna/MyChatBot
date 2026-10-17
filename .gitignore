@@ -7,3 +7,9 @@ obj/
 cdk.out/
 appsettings.Development.local.json
 .env
+
+# Test coverage output
+coverage/
+coverage-report/
+TestResults/
+tools/

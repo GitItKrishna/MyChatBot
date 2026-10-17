@@ -1,0 +1,34 @@
+name: CodeQL
+
+# GitHub's code scanner. Looks for security problems in the C# source (injection, unsafe
+# deserialization, weak crypto, and similar). Results appear under Security > Code scanning.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"   # every Monday 06:00 UTC, to catch newly published rules
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze C#
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write   # needed to upload results
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          build-mode: none     # analyzes the source directly; no build needed
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"
